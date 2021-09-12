@@ -104,9 +104,20 @@ class Bacteria:
         bottom_y = math.floor(self.tb_sensor.bottom /100) 
         bottom_colour = self.get_colour_from_tile(bottom_x,bottom_y)
 
-        print (right_colour, left_colour, top_colour, bottom_colour)
+        center_x = math.floor(self.x /100) 
+        center_y = math.floor(self.y /100) 
+        center_colour = self.get_colour_from_tile(center_x,center_y)
+
+        print ( right_colour, left_colour, top_colour, bottom_colour,center_colour)
     def get_colour_from_tile(self,x,y):
-        return grid_array[x,y].colour
+
+        try:
+             return grid_array[x,y].colour
+        except IndexError:
+            if x > 9:
+                return grid_array[x-1,y].colour
+            else:
+                return grid_array[x,y-1].colour
 
     def mitosis(self):
         pass
@@ -177,7 +188,7 @@ def main():
         for bac in bac_population:
             bac.eat()
             bac.radiate()
-            #bac.move(direction="right")
+            bac.move(direction="down")
             
         redraw_window()
         bac.see()
