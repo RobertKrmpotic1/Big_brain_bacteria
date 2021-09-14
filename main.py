@@ -184,7 +184,7 @@ class Bacteria:
 
 
     def calculate_radiation(self,current_speed):
-        radiation_amount = 0.1 + current_speed/4
+        radiation_amount = 0.1 + current_speed/10
         return radiation_amount
 
 def create_grids( grid_array:np.array, size = 100):
@@ -262,9 +262,9 @@ def main():
     while run:
         clock.tick(FPS)
         for bac in bac_population:
-            list1 =  ["move_up", "eat","move_down", "move_left", "move_right"]
+            list1 =  ["move_up", "eat","move_down", "move_left", "move_right", "eat", "eat", "eat"]
             #bac.update(command="eat")
-            bac.update(command= list1[random.randint(0,4)])
+            bac.update(command= list1[random.randint(0,7)])
         
         if len(bac_population)>0:
             time_spent_alive+=1

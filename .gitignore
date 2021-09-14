@@ -75,6 +75,7 @@ docs/_build/
 target/
 
 # Jupyter Notebook
+.ipynb
 .ipynb_checkpoints
 
 # IPython
@@ -127,3 +128,5 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+his_code.py
