@@ -24,17 +24,26 @@ BG = pygame.transform.scale(pygame.image.load(os.path.join("assets", "background
 current_generation = 0 # Generation counter
 
 class Square:
-    def __init__(self, x:int, y:int, colour:tuple=(random.randint(0,255),0,random.randint(0,255))):#rgb?
+    def __init__(self, x:int, y:int, colour:list=(random.randint(0,255),0,random.randint(0,255))):#rgb?
         self.x = x
         self.y = y
         self.image = None
         self.colour = colour
         
     def draw(self,window):
-        pygame.draw.rect(surface = window, color = self.colour, rect = (self.x,self.y, 100,100))
+        pygame.draw.rect(surface = window, color = tuple(self.colour), rect = (self.x,self.y, 100,100))
 
-    def change_colour(self,new_colour:tuple()):
-        self.colour = new_colour
+    def change_colour(self,colour_delta:list):
+        print("change colour")
+        for i in range (0,3):
+            if colour_delta[i] > 0:
+                print(colour_delta[i])
+                print(self.colour)
+                self.colour[i] += colour_delta[i]
+                print(self.colour)
+            
+    
+
 
 
 class Bacteria:
@@ -44,6 +53,7 @@ class Bacteria:
         self.colour = colour
         self.time = 0
         self.alive = True
+        self.center_tile_pos = self.get_tile_position([self.x,self.y])
 
         self.max_energy = max_energy
         self.current_energy = current_energy
@@ -65,11 +75,15 @@ class Bacteria:
 
     def eat(self):
         if self.current_energy <= self.max_energy - 10:
-            self.current_energy += 10
-        pass
+            self.current_energy += 5
+            center_tile = self.get_tile(self.center_tile_pos)
+            center_tile.change_colour([-10,0,0])
 
     def radiate(self):
-        self.current_energy -= self.calculate_radiation(self.current_speed)
+        radiation_amount = self.calculate_radiation(self.current_speed)
+        self.current_energy -= radiation_amount
+        center_tile = self.get_tile(self.center_tile_pos)
+        center_tile.change_colour([0,0,10])
         if self.current_energy <= 0:
             self.die()
     
@@ -86,38 +100,54 @@ class Bacteria:
         elif direction == "left":
             if self.x >= 40:
                 self.x -=self.max_speed
+        #self.update_current_tile()
 
     def see (self):
-        right_x = math.floor(self.rl_sensor.right /100) 
-        right_y = math.floor(self.rl_sensor.top /100) 
-        right_colour = self.get_colour_from_tile(right_x,right_y)
+        #maybe check if center colour have changed and only compute if there is a change
+        center_colour = self.get_colour_from_tile(self.get_tile_position([self.x,self.y]))
+        right_colour = self.get_colour_from_tile(self.get_tile_position([self.rl_sensor.right,self.rl_sensor.top]))
+        left_colour = self.get_colour_from_tile(self.get_tile_position([self.rl_sensor.left,self.rl_sensor.top]))
+        top_colour = self.get_colour_from_tile(self.get_tile_position([self.tb_sensor.right,self.tb_sensor.top]))
+        bottom_colour = self.get_colour_from_tile(self.get_tile_position([self.tb_sensor.right,self.tb_sensor.bottom]))
 
-        left_x = math.floor(self.rl_sensor.left /100) 
-        left_y = math.floor(self.rl_sensor.top /100) 
-        left_colour = self.get_colour_from_tile(left_x,left_y)
+        print ( left_colour, right_colour, center_colour, top_colour, bottom_colour,)
 
-        top_x = math.floor(self.tb_sensor.right /100) 
-        top_y = math.floor(self.tb_sensor.top /100) 
-        top_colour = self.get_colour_from_tile(top_x,top_y)
+    def update(self, command):
+        if command == "move_up":
+            self.move(direction="up")
+        elif command == "move_down":
+            self.move(direction="down")
+        elif command == "move_left":
+            self.move(direction="left")
+        elif command == "move_right":
+            self.move(direction="right")
+        elif command == "eat":
+            self.eat()
+        self.radiate()
 
-        bottom_x = math.floor(self.tb_sensor.right /100) 
-        bottom_y = math.floor(self.tb_sensor.bottom /100) 
-        bottom_colour = self.get_colour_from_tile(bottom_x,bottom_y)
-
-        center_x = math.floor(self.x /100) 
-        center_y = math.floor(self.y /100) 
-        center_colour = self.get_colour_from_tile(center_x,center_y)
-
-        print ( right_colour, left_colour, top_colour, bottom_colour,center_colour)
-    def get_colour_from_tile(self,x,y):
-
+    def get_colour_from_tile(self,xy:list):
         try:
-             return grid_array[x,y].colour
+             return grid_array[xy[0],xy[1]].colour
         except IndexError:
-            if x > 9:
-                return grid_array[x-1,y].colour
+            if xy[0] > 9:
+                return grid_array[xy[0]-1,xy[1]].colour
             else:
-                return grid_array[x,y-1].colour
+                return grid_array[xy[0],xy[1]-1].colour
+    
+    def get_tile(self,xy:list):
+        try:
+             return grid_array[xy[0],xy[1]]
+        except IndexError:
+            if xy[0] > 9:
+                return grid_array[xy[0]-1,xy[1]]
+            else:
+                return grid_array[xy[0],xy[1]-1]
+
+    def get_tile_position (self,xy:list):
+        arr_x = math.floor(xy[0] /100) 
+        arr_y = math.floor(xy[1] /100)
+        return [arr_x,arr_y]
+
 
     def mitosis(self):
         pass
@@ -135,10 +165,8 @@ def create_grids( grid_array:np.array, size = 100):
     
     for x in range(0, WIDTH, size): 
         for y in range(0, HEIGHT, size):
-            grid_array = np.append(grid_array,Square(x=x,y=y, colour=(random.randint(0,255),0,random.randint(0,255) )) )
+            grid_array = np.append(grid_array,Square(x=x,y=y, colour=[random.randint(0,255),0,random.randint(0,255) ]) )
     return grid_array
-
-
             
 def statistics(bacteria):
         text_1 = FONT.render(f'Energy:{str(round(bacteria.current_energy,1))}', True, (0, 255, 0)) 
@@ -167,8 +195,8 @@ def main():
     grid_array = create_grids(grid_array).reshape(10,10)
 
     #first_tile = grid_array[0,0]
-    three_two_tile = grid_array[1,3]
-    three_two_tile.change_colour((0,0,0))
+    #three_two_tile = grid_array[1,3]
+    #three_two_tile.change_colour((0,0,0))
 
     def redraw_window():
         WIN.blit(BG,(0,0))
@@ -186,9 +214,7 @@ def main():
     while run:
         clock.tick(FPS)
         for bac in bac_population:
-            bac.eat()
-            bac.radiate()
-            bac.move(direction="down")
+            bac.update(command="none")
             
         redraw_window()
         bac.see()
