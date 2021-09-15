@@ -180,8 +180,8 @@ class Bacteria:
         bac_population.append(new_bacteria)
 
     def get_new_spawnpoint(self,x,y):
-        rand_int_x = random.randint(-100,100)
-        rand_int_y = random.randint(-100,100)
+        rand_int_x = random.randint(-60,60)
+        rand_int_y = random.randint(-60,60)
         new_x = x + rand_int_x
         new_y = y + rand_int_y
         if new_x > 1000 or new_x<0:
@@ -207,7 +207,7 @@ class Bacteria:
 #general functions
 #should this be in utils?
 def create_grids( grid_array:np.array, size = 100):
-    print("creating grids")
+    #print("creating grids")
     
     for x in range(0, WIDTH, size): 
         for y in range(0, HEIGHT, size):
@@ -215,8 +215,9 @@ def create_grids( grid_array:np.array, size = 100):
     return grid_array
             
 def statistics(bacteria):
-    text_1 = FONT.render(f'{str(int(round(bacteria.current_energy,0)))}', True, (0, 255, 0)) 
-    WIN.blit(text_1, (bacteria.x, bacteria.y))
+    #text_1 = FONT.render(f'{str(int(round(bacteria.current_energy,0)))}', True, (0, 255, 0)) 
+    #WIN.blit(text_1, (bacteria.x, bacteria.y))
+    pass
         
 def total_food_in_grids(grid_array):
     total_food =0
@@ -225,7 +226,7 @@ def total_food_in_grids(grid_array):
     return total_food 
 
 def calculate_fitness_function(max_population,time_spent_alive, perc_eaten):
-    return (time_spent_alive + 6*max_population) * (perc_eaten*perc_eaten)
+    return (time_spent_alive/2 + 10*max_population) * (perc_eaten*perc_eaten)
 
 
 def main():
@@ -303,18 +304,20 @@ def main():
             if event.type == pygame.QUIT:
                 run=False
         
-if __name__ == "__main__":
+#if __name__ == "__main__":
         # Load Config
-    config_path = "./config.txt"
-    config = neat.config.Config(neat.DefaultGenome,
-                                neat.DefaultReproduction,
-                                neat.DefaultSpeciesSet,
-                                neat.DefaultStagnation,
-                                config_path)
+#    config_path = "./config.txt"
+#    config = neat.config.Config(neat.DefaultGenome,
+#                                neat.DefaultReproduction,
+#                                neat.DefaultSpeciesSet,
+#                                neat.DefaultStagnation,
+#                                config_path)
 
     # Create Population And Add Reporters
-    net_population = neat.Population(config)
-    net_population.add_reporter(neat.StdOutReporter(True))
-    stats = neat.StatisticsReporter()
-    net_population.add_reporter(stats)
+#    net_population = neat.Population(config)
+#    net_population.add_reporter(neat.StdOutReporter(True))
+#    stats = neat.StatisticsReporter()
+#    net_population.add_reporter(stats)
+for x in range(1,6):
+    print(f"generation: {x}")
     main()
