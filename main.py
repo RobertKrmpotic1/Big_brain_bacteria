@@ -91,7 +91,7 @@ class Bacteria:
             center_tile = self.get_tile(self.center_tile_pos)
             self.current_energy += center_tile.eat_me(red = 20)
             if self.current_energy > 90:
-                self.mitosis()
+                self.mitosis(self.x,self.y)
 
     def radiate(self):
         radiation_amount = self.calculate_radiation(self.current_speed)
@@ -114,6 +114,7 @@ class Bacteria:
         elif direction == "left":
             if self.x >= 40:
                 self.x -=self.max_speed
+        self.center_tile_pos = self.get_tile_position([self.x,self.y])
         #self.update_current_tile()
 
     def see (self):
@@ -145,12 +146,18 @@ class Bacteria:
         self.hunger = self.max_energy - self.current_energy
 
     def get_colour_from_tile(self,xy:list):
+        print(xy)
         try:
              return grid_array[xy[0],xy[1]].colour
         except IndexError:
             if xy[0] > 9:
+                print("if")
                 return grid_array[xy[0]-1,xy[1]].colour
+            elif xy == [10,10]:
+                print("elif")
+                return grid_array[xy[0]-1,xy[1]-1].colour
             else:
+                print("elif")
                 return grid_array[xy[0],xy[1]-1].colour
     
     def get_tile(self,xy:list):
@@ -168,8 +175,8 @@ class Bacteria:
         return [arr_x,arr_y]
 
 
-    def mitosis(self):
-        new_bacteria = Bacteria(min(self.x + 100,1000), y=250)
+    def mitosis(self,x,y):
+        new_bacteria = Bacteria(min(x + 100,1000), (min(y + 100,1000)))
         bac_population.append(new_bacteria)
 
     def die(self):
@@ -196,10 +203,10 @@ def create_grids( grid_array:np.array, size = 100):
     return grid_array
             
 def statistics(bacteria):
-        text_1 = FONT.render(f'Energy:{str(round(bacteria.current_energy,1))}', True, (0, 255, 0)) 
+        text_1 = FONT.render(f'{str(int(round(bacteria.current_energy,0)))}', True, (0, 255, 0)) 
         text_2 = FONT.render(f'Population:{str(len(bac_population))}', True, (0, 255, 0)) 
 
-        WIN.blit(text_1, (50, 50))
+        WIN.blit(text_1, (bacteria.x, bacteria.y))
         WIN.blit(text_2, (50, 100))
 
 
@@ -262,9 +269,9 @@ def main():
     while run:
         clock.tick(FPS)
         for bac in bac_population:
-            list1 =  ["move_up", "eat","move_down", "move_left", "move_right", "eat", "eat", "eat"]
+            list1 =  [ "eat","move_down", "move_left", "move_right", "eat", "eat", "eat", "eat", "eat"]
             #bac.update(command="eat")
-            bac.update(command= list1[random.randint(0,7)])
+            bac.update(command= list1[random.randint(0,8)])
         
         if len(bac_population)>0:
             time_spent_alive+=1
