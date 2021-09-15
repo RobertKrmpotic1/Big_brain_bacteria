@@ -28,8 +28,8 @@ class Square:
         self.x = x
         self.y = y
         self.image = None
-        self.blue = random.randint(0,255)
-        self.red = random.randint(0,255)
+        self.blue = colour[2]
+        self.red = colour[0]
         self.colour = colour
         
     def draw(self,window):
@@ -150,10 +150,10 @@ class Bacteria:
         try:
              return grid_array[xy[0],xy[1]].colour
         except IndexError:
-            if xy[0] > 9:
+            if xy == [10,10]:
                 print("if")
                 return grid_array[xy[0]-1,xy[1]].colour
-            elif xy == [10,10]:
+            elif xy[0] > 9:
                 print("elif")
                 return grid_array[xy[0]-1,xy[1]-1].colour
             else:
@@ -176,8 +176,19 @@ class Bacteria:
 
 
     def mitosis(self,x,y):
-        new_bacteria = Bacteria(min(x + 100,1000), (min(y + 100,1000)))
+        new_x, new_y = self.get_new_spawnpoint(x,y)
+        new_bacteria = Bacteria(new_x, new_y)
         bac_population.append(new_bacteria)
+
+    def get_new_spawnpoint(self,x,y):
+        rand_int = random.randint(-100,100)
+        new_x = x + rand_int
+        new_y = y + rand_int
+        if new_x > 1000 or new_x<0:
+            new_x = new_x - 2*rand_int
+        if new_y > 1000 or new_y<0:
+            new_y = new_y - 2*rand_int
+        return new_x, new_y
 
     def die(self):
         
