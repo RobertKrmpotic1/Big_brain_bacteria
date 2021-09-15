@@ -61,7 +61,7 @@ class Square:
 
 
 class Bacteria:
-    def __init__(self, x:int, y:int, colour:tuple=(0,155,255), max_energy = 100,current_energy=50, max_speed=10, current_speed = 10, vision_range = 150 ):
+    def __init__(self, x:int, y:int, colour:tuple=(0,155,255), max_energy = 100,current_energy=50, max_speed=10, current_speed = 0, vision_range = 150 ):
         self.x = x
         self.y = y
         self.colour = colour
@@ -87,9 +87,10 @@ class Bacteria:
         self.tb_sensor = pygame.draw.line(surface=WIN, color = (0,255,0), start_pos=(self.x,self.y+100), end_pos=(self.x , self.y -100))
 
     def eat(self):
-        if self.current_energy <= self.max_energy - 10:
+        self.current_speed = 0
+        if self.current_energy <= self.max_energy - 5:
             center_tile = self.get_tile(self.center_tile_pos)
-            self.current_energy += center_tile.eat_me(red = 20)
+            self.current_energy += center_tile.eat_me(red = 5)
             if self.current_energy > 90:
                 self.mitosis(self.x,self.y)
 
@@ -114,6 +115,7 @@ class Bacteria:
         elif direction == "left":
             if self.x >= 40:
                 self.x -=self.max_speed
+        self.current_speed = self.max_speed
         self.center_tile_pos = self.get_tile_position([self.x,self.y])
         #self.update_current_tile()
 
@@ -124,7 +126,7 @@ class Bacteria:
         top_colour = self.get_colour_from_tile(self.get_tile_position([self.tb_sensor.right,self.tb_sensor.top]))
         bottom_colour = self.get_colour_from_tile(self.get_tile_position([self.tb_sensor.right,self.tb_sensor.bottom]))
 
-        print ( center_colour)
+        #print ( center_colour)
 
     def update(self, command):
         #look around
@@ -146,18 +148,14 @@ class Bacteria:
         self.hunger = self.max_energy - self.current_energy
 
     def get_colour_from_tile(self,xy:list):
-        print(xy)
         try:
              return grid_array[xy[0],xy[1]].colour
         except IndexError:
             if xy == [10,10]:
-                print("if")
                 return grid_array[xy[0]-1,xy[1]].colour
             elif xy[0] > 9:
-                print("elif")
                 return grid_array[xy[0]-1,xy[1]-1].colour
             else:
-                print("elif")
                 return grid_array[xy[0],xy[1]-1].colour
     
     def get_tile(self,xy:list):
@@ -177,21 +175,22 @@ class Bacteria:
 
     def mitosis(self,x,y):
         new_x, new_y = self.get_new_spawnpoint(x,y)
-        new_bacteria = Bacteria(new_x, new_y)
+        new_bacteria = Bacteria(new_x, new_y, current_energy=self.current_energy/2)
+        self.current_energy = self.current_energy/2
         bac_population.append(new_bacteria)
 
     def get_new_spawnpoint(self,x,y):
-        rand_int = random.randint(-100,100)
-        new_x = x + rand_int
-        new_y = y + rand_int
+        rand_int_x = random.randint(-100,100)
+        rand_int_y = random.randint(-100,100)
+        new_x = x + rand_int_x
+        new_y = y + rand_int_y
         if new_x > 1000 or new_x<0:
-            new_x = new_x - 2*rand_int
+            new_x = new_x - 2*rand_int_x
         if new_y > 1000 or new_y<0:
-            new_y = new_y - 2*rand_int
+            new_y = new_y - 2*rand_int_y
         return new_x, new_y
 
     def die(self):
-        
         self.say_gg(self.x,self.y)
         #this needs to be changed to 
         index = (bac_population.index(self))
@@ -205,26 +204,31 @@ class Bacteria:
         radiation_amount = 0.1 + current_speed/10
         return radiation_amount
 
+#general functions
+#should this be in utils?
 def create_grids( grid_array:np.array, size = 100):
     print("creating grids")
     
     for x in range(0, WIDTH, size): 
         for y in range(0, HEIGHT, size):
-            grid_array = np.append(grid_array,Square(x=x,y=y, colour=[random.randint(150,255),0,random.randint(0,255) ]) )
+            grid_array = np.append(grid_array,Square(x=x,y=y, colour=[random.randint(100,255),0,random.randint(0,255) ]) )
     return grid_array
             
 def statistics(bacteria):
-        text_1 = FONT.render(f'{str(int(round(bacteria.current_energy,0)))}', True, (0, 255, 0)) 
-        text_2 = FONT.render(f'Population:{str(len(bac_population))}', True, (0, 255, 0)) 
+    text_1 = FONT.render(f'{str(int(round(bacteria.current_energy,0)))}', True, (0, 255, 0)) 
+    WIN.blit(text_1, (bacteria.x, bacteria.y))
+        
+def total_food_in_grids(grid_array):
+    total_food =0
+    for tile in grid_array.flat:
+        total_food +=tile.red
+    return total_food 
 
-        WIN.blit(text_1, (bacteria.x, bacteria.y))
-        WIN.blit(text_2, (50, 100))
-
+def calculate_fitness_function(max_population,time_spent_alive, perc_eaten):
+    return (time_spent_alive + 6*max_population) * (perc_eaten*perc_eaten)
 
 
 def main():
-    
-
     run = True
     FPS = 60
     
@@ -237,16 +241,15 @@ def main():
     max_population=0
     time_spent_alive=0
     gg_dict = {}
+
     #setup
     pygame.init()
     clock = pygame.time.Clock()
     bacteria = Bacteria(x=150, y=250)
     bac_population.append(bacteria)
     grid_array = create_grids(grid_array).reshape(10,10)
-    #PLAYSOUNDEVENT = pygame.USEREVENT + 1
-    #pygame.time.set_timer(PLAYSOUNDEVENT, 65)
+    total_food_start = total_food_in_grids(grid_array)
     
-
     #draw on screen
     def redraw_window():
         WIN.blit(BG,(0,0))
@@ -257,15 +260,15 @@ def main():
         for bac in bac_population:
             bac.draw()
             statistics(bac)
+        text_2 = FONT.render(f'Population:{str(len(bac_population))}', True, (0, 255, 0)) 
+        WIN.blit(text_2, (50, 100))
         check_gg()
 
         pygame.display.update()
     
     def check_gg():
-
         delete_list = []
         for key,value in gg_dict.items():
-            print(key,value)
             if key == time_spent_alive:
                 delete_list.append(key)
             else:
@@ -280,7 +283,7 @@ def main():
     while run:
         clock.tick(FPS)
         for bac in bac_population:
-            list1 =  [ "eat","move_down", "move_left", "move_right", "eat", "eat", "eat", "eat", "eat"]
+            list1 =  [ "eat","move_down","move_up" , "move_left", "move_right", "eat", "eat", "eat", "eat", "eat"]
             #bac.update(command="eat")
             bac.update(command= list1[random.randint(0,8)])
         
@@ -288,12 +291,14 @@ def main():
             time_spent_alive+=1
             if len(bac_population)>max_population:
                 max_population = len(bac_population)
+
+        if len(bac_population)<=0:
+            total_food_end = total_food_in_grids(grid_array)        
+            print(f"max_pop= {max_population} ; fitness = {round(calculate_fitness_function(max_population,time_spent_alive, 1-total_food_end/total_food_start))} ; alive_for:  {time_spent_alive}, start_food = {total_food_start}, end_food ={total_food_end}")
+            time.sleep(1)
+            run=False
         
         redraw_window()
-        
-        #if pygame.event.get(PLAYSOUNDEVENT): # check event queue contains PLAYSOUNDEVENT 
-        #    print("troll")
-
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run=False
