@@ -91,10 +91,8 @@ class Bacteria:
         if self.current_energy <= self.max_energy - 5:
             center_tile = self.get_tile(self.center_tile_pos)
             self.current_energy += center_tile.eat_me(red = 5)
-            #if self.current_energy > 90:
-                #self.mitosis(self.x,self.y)
-                #print("I wanna divide")
-
+            if self.current_energy > 90:
+                self.mitosis(self.x,self.y)
 
     def radiate(self):
         radiation_amount = self.calculate_radiation(self.current_speed)
@@ -131,7 +129,7 @@ class Bacteria:
         #print ( center_colour)
     
     def get_data(self):
-        input_list=[]
+        input_list=[] #would dict make more sense?
         colour_list = self.see()
         for colour in colour_list:
             input_list.append(colour[0]) #red
@@ -139,8 +137,6 @@ class Bacteria:
         input_list.append(self.hunger)
         #print(input_list)
         return input_list
-
-
 
     def update(self, command):
         #look around
@@ -158,7 +154,6 @@ class Bacteria:
             self.eat()
         #radiate energy
         self.radiate()
-        #
         self.hunger = self.max_energy - self.current_energy
 
     def get_colour_from_tile(self,xy:list):
@@ -220,13 +215,13 @@ class Bacteria:
 
 #general functions
 #should this be in utils?
+
 #create grid once
-def create_grids( grid_array:np.array, size = 100):
-    #print("creating grids")
-    
+def create_grids( grid_array:np.array, size = 100):    
     for x in range(0, WIDTH, size): 
         for y in range(0, HEIGHT, size):
             grid_array = np.append(grid_array,Square(x=x,y=y, colour=[random.randint(100,255),0,random.randint(0,255) ]) )
+    np.save("grid_array0.npy",grid_array)
     return grid_array
             
 def statistics(bacteria):
@@ -241,7 +236,7 @@ def total_food_in_grids(grid_array):
     return total_food 
 
 def calculate_fitness_function(max_population,time_spent_alive, perc_eaten):
-    return (time_spent_alive/2 + 10*max_population) #* (perc_eaten*perc_eaten)
+    return (max_population) * (perc_eaten*perc_eaten)
 
 def calculate_population():
     pop = 0
@@ -256,7 +251,7 @@ def run_simulation(genomes, config):
     FPS = 60
     
     # Empty Collections For Nets and bac population
-    global nets, bac_population, grid_array,current_generation,max_population,current_population,gg_dict,time_spent_alive 
+    global nets, bac_population, grid_array,current_generation,max_population,current_population,gg_dict,time_spent_alive, current_generation
     nets = []
     bac_population =  []
     grid_array = np.array([])
@@ -268,8 +263,6 @@ def run_simulation(genomes, config):
     #setup
     pygame.init()
     clock = pygame.time.Clock()
-    #bacteria = Bacteria(x=150, y=250)
-    #bac_population.append(bacteria)
     grid_array = create_grids(grid_array).reshape(10,10)
     total_food_start = total_food_in_grids(grid_array)
 
@@ -279,8 +272,9 @@ def run_simulation(genomes, config):
         net = neat.nn.FeedForwardNetwork.create(g, config)
         nets.append(net)
         g.fitness = 0
-        bac_population.append(Bacteria(x=150, y=250))
+        bac_population.append(Bacteria(x=random.randint(50,950), y=random.randint(50,950)))
     current_population = len(bac_population)
+    current_generation += 1
     print(f"Population created. size={len(nets)},{len(bac_population)}")
     
     #draw on screen
@@ -295,7 +289,9 @@ def run_simulation(genomes, config):
                 bac.draw()
                 statistics(bac)
         text_2 = FONT.render(f'Population:{current_population}', True, (0, 255, 0)) 
+        text_3 = FONT.render(f'Generation:{current_generation}', True, (0, 255, 0)) 
         WIN.blit(text_2, (50, 100))
+        WIN.blit(text_3, (50, 150))
         check_gg()
 
         pygame.display.update()
@@ -316,25 +312,18 @@ def run_simulation(genomes, config):
     #Every tick
     while run:
         clock.tick(FPS)
-        #for bac in bac_population:
-        #    list1 =  [ "eat","move_down","move_up" , "move_left", "move_right", "eat", "eat", "eat", "eat", "eat"]
-            #bac.update(command="eat")
-        #    bac.update(command= list1[random.randint(0,8)])
-    
-        for i, bac in enumerate(bac_population):
-            #print(f"i = {i}, bac_pop = {len(bac_population)}, nets_len = {len(nets)}")
-            if bac_population[i].is_alive:
-
-                output = nets[i].activate(bac.get_data())
+        #there should be 1 brain (1 memeber in net) and it should just keep making decisions
+        for bac in bac_population:
+            if bac.is_alive:
+                output = nets[0].activate(bac.get_data())
                 choice = output.index(max(output))
                 command_dict={0:"move_up",1:"move_down", 2:"move_right", 3:"move_left", 4:"eat", 5:"rest"}
-                #print(command_dict[choice])
                 bac.update(command=command_dict[choice])
-                genomes[i][1].fitness += 1
-                #print(f"fitness : {genomes[i][1].fitness}")
+                if bac.hunger < 30:
+                    genomes[0][1].fitness +=1
             else:
-                #print("passing")
                 pass
+        total_food_end = total_food_in_grids(grid_array) 
 
         current_population = calculate_population()
         if current_population>0:
@@ -345,8 +334,6 @@ def run_simulation(genomes, config):
         if current_population<=0:
             total_food_end = total_food_in_grids(grid_array)        
             print(f"max_pop= {max_population} ; fitness = {round(calculate_fitness_function(max_population,time_spent_alive, 1-total_food_end/total_food_start))} ; alive_for:  {time_spent_alive}, start_food = {total_food_start}, end_food ={total_food_end}")
-            #for i, bac in enumerate(bac_population):
-            #    genomes[i][1].fitness == calculate_fitness_function(max_population,time_spent_alive, 1-total_food_end/total_food_start)
 
             time.sleep(1)
             run=False
@@ -373,4 +360,4 @@ if __name__ == "__main__":
     stats = neat.StatisticsReporter()
     net_population.add_reporter(stats)
     print(net_population)
-    net_population.run(run_simulation, 3)
+    net_population.run(run_simulation, 50)
