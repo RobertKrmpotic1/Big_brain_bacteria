@@ -28,8 +28,8 @@ class Square:
         self.x = x
         self.y = y
         self.image = None
-        self.blue = random.randint(0,255)
-        self.red = random.randint(0,255)
+        self.blue = colour[2]
+        self.red = colour[0]
         self.colour = colour
         
     def draw(self,window):
@@ -61,12 +61,12 @@ class Square:
 
 
 class Bacteria:
-    def __init__(self, x:int, y:int, colour:tuple=(0,155,255), max_energy = 100,current_energy=50, max_speed=10, current_speed = 10, vision_range = 150 ):
+    def __init__(self, x:int, y:int, colour:tuple=(0,155,255), max_energy = 100,current_energy=50, max_speed=10, current_speed = 0, vision_range = 150 ):
         self.x = x
         self.y = y
         self.colour = colour
         self.time = 0
-        self.alive = True
+        self.is_alive = True
         self.center_tile_pos = self.get_tile_position([self.x,self.y])
 
         self.max_energy = max_energy
@@ -87,11 +87,12 @@ class Bacteria:
         self.tb_sensor = pygame.draw.line(surface=WIN, color = (0,255,0), start_pos=(self.x,self.y+100), end_pos=(self.x , self.y -100))
 
     def eat(self):
-        if self.current_energy <= self.max_energy - 10:
+        self.current_speed = 0
+        if self.current_energy <= self.max_energy - 5:
             center_tile = self.get_tile(self.center_tile_pos)
-            self.current_energy += center_tile.eat_me(red = 20)
+            self.current_energy += center_tile.eat_me(red = 5)
             if self.current_energy > 90:
-                self.mitosis()
+                self.mitosis(self.x,self.y)
 
     def radiate(self):
         radiation_amount = self.calculate_radiation(self.current_speed)
@@ -114,6 +115,8 @@ class Bacteria:
         elif direction == "left":
             if self.x >= 40:
                 self.x -=self.max_speed
+        self.current_speed = self.max_speed
+        self.center_tile_pos = self.get_tile_position([self.x,self.y])
         #self.update_current_tile()
 
     def see (self):
@@ -122,8 +125,18 @@ class Bacteria:
         left_colour = self.get_colour_from_tile(self.get_tile_position([self.rl_sensor.left,self.rl_sensor.top]))
         top_colour = self.get_colour_from_tile(self.get_tile_position([self.tb_sensor.right,self.tb_sensor.top]))
         bottom_colour = self.get_colour_from_tile(self.get_tile_position([self.tb_sensor.right,self.tb_sensor.bottom]))
-
-        print ( center_colour)
+        return [top_colour, left_colour, center_colour, bottom_colour, right_colour]
+        #print ( center_colour)
+    
+    def get_data(self):
+        input_list=[] #would dict make more sense?
+        colour_list = self.see()
+        for colour in colour_list:
+            input_list.append(colour[0]) #red
+            input_list.append(colour[2]) #blue
+        input_list.append(self.hunger)
+        #print(input_list)
+        return input_list
 
     def update(self, command):
         #look around
@@ -141,15 +154,16 @@ class Bacteria:
             self.eat()
         #radiate energy
         self.radiate()
-        #
         self.hunger = self.max_energy - self.current_energy
 
     def get_colour_from_tile(self,xy:list):
         try:
              return grid_array[xy[0],xy[1]].colour
         except IndexError:
-            if xy[0] > 9:
+            if xy == [10,10]:
                 return grid_array[xy[0]-1,xy[1]].colour
+            elif xy[0] > 9:
+                return grid_array[xy[0]-1,xy[1]-1].colour
             else:
                 return grid_array[xy[0],xy[1]-1].colour
     
@@ -168,50 +182,76 @@ class Bacteria:
         return [arr_x,arr_y]
 
 
-    def mitosis(self):
-        new_bacteria = Bacteria(min(self.x + 100,1000), y=250)
+    def mitosis(self,x,y):
+        new_x, new_y = self.get_new_spawnpoint(x,y)
+        new_bacteria = Bacteria(new_x, new_y, current_energy=self.current_energy/2)
+        self.current_energy = self.current_energy/2
         bac_population.append(new_bacteria)
 
+    def get_new_spawnpoint(self,x,y):
+        rand_int_x = random.randint(-60,60)
+        rand_int_y = random.randint(-60,60)
+        new_x = x + rand_int_x
+        new_y = y + rand_int_y
+        if new_x > 1000 or new_x<0:
+            new_x = new_x - 2*rand_int_x
+        if new_y > 1000 or new_y<0:
+            new_y = new_y - 2*rand_int_y
+        return new_x, new_y
+
     def die(self):
-        
         self.say_gg(self.x,self.y)
-        #this needs to be changed to 
-        index = (bac_population.index(self))
-        bac_population.pop(index)
+        self.is_alive = False
+        #index = (bac_population.index(self))
+        #bac_population.pop(index)
         
     def say_gg(self,x,y):
         gg_dict[time_spent_alive + 15] =  [x,y]
 
 
     def calculate_radiation(self,current_speed):
-        radiation_amount = 0.1 + current_speed/4
+        radiation_amount = 0.1 + current_speed/10
         return radiation_amount
 
-def create_grids( grid_array:np.array, size = 100):
-    print("creating grids")
-    
+#general functions
+#should this be in utils?
+
+#create grid once
+def create_grids( grid_array:np.array, size = 100):    
     for x in range(0, WIDTH, size): 
         for y in range(0, HEIGHT, size):
-            grid_array = np.append(grid_array,Square(x=x,y=y, colour=[random.randint(150,255),0,random.randint(0,255) ]) )
+            grid_array = np.append(grid_array,Square(x=x,y=y, colour=[random.randint(100,255),0,random.randint(0,255) ]) )
+    np.save("grid_array0.npy",grid_array)
     return grid_array
             
 def statistics(bacteria):
-        text_1 = FONT.render(f'Energy:{str(round(bacteria.current_energy,1))}', True, (0, 255, 0)) 
-        text_2 = FONT.render(f'Population:{str(len(bac_population))}', True, (0, 255, 0)) 
+    text_1 = FONT.render(f'{str(int(round(bacteria.current_energy,0)))}', True, (0, 255, 0)) 
+    WIN.blit(text_1, (bacteria.x, bacteria.y))
+    pass
+        
+def total_food_in_grids(grid_array):
+    total_food =0
+    for tile in grid_array.flat:
+        total_food +=tile.red
+    return total_food 
 
-        WIN.blit(text_1, (50, 50))
-        WIN.blit(text_2, (50, 100))
+def calculate_fitness_function(max_population,time_spent_alive, perc_eaten):
+    return (max_population) * (perc_eaten*perc_eaten)
+
+def calculate_population():
+    pop = 0
+    for bac in bac_population:
+        if bac.is_alive:
+            pop +=1
+    return pop
 
 
-
-def main():
-    
-
+def run_simulation(genomes, config):
     run = True
     FPS = 60
     
     # Empty Collections For Nets and bac population
-    global nets, bac_population, grid_array,current_generation,max_population,gg_dict,time_spent_alive 
+    global nets, bac_population, grid_array,current_generation,max_population,current_population,gg_dict,time_spent_alive, current_generation
     nets = []
     bac_population =  []
     grid_array = np.array([])
@@ -219,16 +259,24 @@ def main():
     max_population=0
     time_spent_alive=0
     gg_dict = {}
+
     #setup
     pygame.init()
     clock = pygame.time.Clock()
-    bacteria = Bacteria(x=150, y=250)
-    bac_population.append(bacteria)
     grid_array = create_grids(grid_array).reshape(10,10)
-    #PLAYSOUNDEVENT = pygame.USEREVENT + 1
-    #pygame.time.set_timer(PLAYSOUNDEVENT, 65)
-    
+    total_food_start = total_food_in_grids(grid_array)
 
+    for i, g in genomes:
+        # i = population index,
+        #print(genomes)
+        net = neat.nn.FeedForwardNetwork.create(g, config)
+        nets.append(net)
+        g.fitness = 0
+        bac_population.append(Bacteria(x=random.randint(50,950), y=random.randint(50,950)))
+    current_population = len(bac_population)
+    current_generation += 1
+    print(f"Population created. size={len(nets)},{len(bac_population)}")
+    
     #draw on screen
     def redraw_window():
         WIN.blit(BG,(0,0))
@@ -237,17 +285,20 @@ def main():
             for tile in row:
                 tile.draw(WIN)
         for bac in bac_population:
-            bac.draw()
-            statistics(bac)
+            if bac.is_alive:
+                bac.draw()
+                statistics(bac)
+        text_2 = FONT.render(f'Population:{current_population}', True, (0, 255, 0)) 
+        text_3 = FONT.render(f'Generation:{current_generation}', True, (0, 255, 0)) 
+        WIN.blit(text_2, (50, 100))
+        WIN.blit(text_3, (50, 150))
         check_gg()
 
         pygame.display.update()
     
     def check_gg():
-
         delete_list = []
         for key,value in gg_dict.items():
-            print(key,value)
             if key == time_spent_alive:
                 delete_list.append(key)
             else:
@@ -261,21 +312,35 @@ def main():
     #Every tick
     while run:
         clock.tick(FPS)
+        #there should be 1 brain (1 memeber in net) and it should just keep making decisions
         for bac in bac_population:
-            list1 =  ["move_up", "eat","move_down", "move_left", "move_right"]
-            #bac.update(command="eat")
-            bac.update(command= list1[random.randint(0,4)])
-        
-        if len(bac_population)>0:
-            time_spent_alive+=1
-            if len(bac_population)>max_population:
-                max_population = len(bac_population)
-        
-        redraw_window()
-        
-        #if pygame.event.get(PLAYSOUNDEVENT): # check event queue contains PLAYSOUNDEVENT 
-        #    print("troll")
+            if bac.is_alive:
+                output = nets[0].activate(bac.get_data())
+                choice = output.index(max(output))
+                command_dict={0:"move_up",1:"move_down", 2:"move_right", 3:"move_left", 4:"eat", 5:"rest"}
+                bac.update(command=command_dict[choice])
+                if bac.hunger < 30:
+                    genomes[0][1].fitness +=1
+            else:
+                pass
+        total_food_end = total_food_in_grids(grid_array) 
 
+        current_population = calculate_population()
+        if current_population>0:
+            time_spent_alive+=1
+            if current_population>max_population:
+                max_population = current_population
+
+        if current_population<=0:
+            total_food_end = total_food_in_grids(grid_array)        
+            print(f"max_pop= {max_population} ; fitness = {round(calculate_fitness_function(max_population,time_spent_alive, 1-total_food_end/total_food_start))} ; alive_for:  {time_spent_alive}, start_food = {total_food_start}, end_food ={total_food_end}")
+
+            time.sleep(1)
+            run=False
+
+        
+                
+        redraw_window()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run=False
@@ -294,4 +359,5 @@ if __name__ == "__main__":
     net_population.add_reporter(neat.StdOutReporter(True))
     stats = neat.StatisticsReporter()
     net_population.add_reporter(stats)
-    main()
+    print(net_population)
+    net_population.run(run_simulation, 50)
