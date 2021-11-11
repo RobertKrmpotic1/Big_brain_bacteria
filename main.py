@@ -5,7 +5,9 @@ import math
 import time
 import numpy as np
 import pygame
-import neat
+from square import Square
+from generations import Generation, Species
+from utils import *
 
 pygame.font.init()
 
@@ -21,46 +23,7 @@ pygame.display.set_caption("Bacteria sim")
 #Background
 BG = pygame.transform.scale(pygame.image.load(os.path.join("assets", "background-black.png")), (WIDTH, HEIGHT))
 
-
-
-class Square:
-    def __init__(self, x:int, y:int, colour:list=(random.randint(0,255),0,random.randint(0,255))):#rgb?
-        self.x = x
-        self.y = y
-        self.image = None
-        self.blue = colour[2]
-        self.red = colour[0]
-        self.colour = colour
-        
-    def draw(self,window):
-        pygame.draw.rect(surface = window, color = tuple(self.get_colour(self.red, self.blue)), rect = (self.x,self.y, 100,100))
-
-    def get_colour (self, red:int,blue:int):
-        red_c = min(255,red)
-        blue_c = min (255,blue) 
-        self.colour = [red_c,0,blue_c]
-        return [red_c,0,blue_c]
-
-    def eat_me(self,red=0, blue=0):
-        if red > 0:
-            if self.red > red:
-                self.red -= red
-                return red
-            else:
-                max_enr = self.red
-                self.red = 0
-                return max_enr
-        elif blue > 0:
-            if self.blue > blue:
-                self.blue -= blue
-                return blue
-            else:
-                max_enr = self.blue
-                self.blue = 0
-                return max_enr
-
-
-class Bacteria:
+class Bacteria():
     def __init__(self, x:int, y:int, colour:tuple=(0,155,255), max_energy = 100,current_energy=50, max_speed=10, current_speed = 0, vision_range = 150 ):
         self.x = x
         self.y = y
@@ -213,49 +176,15 @@ class Bacteria:
         radiation_amount = 0.1 + current_speed/10
         return radiation_amount
 
-#general functions
-#should this be in utils?
 
-#create grid once
-def create_grids( grid_array:np.array, size = 100):    
-    for x in range(0, WIDTH, size): 
-        for y in range(0, HEIGHT, size):
-            grid_array = np.append(grid_array,Square(x=x,y=y, colour=[random.randint(100,255),0,random.randint(0,255) ]) )
-    np.save("grid_array0.npy",grid_array)
-    return grid_array
-            
-def statistics(bacteria):
-    text_1 = FONT.render(f'{str(int(round(bacteria.current_energy,0)))}', True, (0, 255, 0)) 
-    WIN.blit(text_1, (bacteria.x, bacteria.y))
-    pass
-        
-def total_food_in_grids(grid_array):
-    total_food =0
-    for tile in grid_array.flat:
-        total_food +=tile.red
-    return total_food 
-
-def calculate_fitness_function(max_population,time_spent_alive, perc_eaten):
-    return (max_population) * (perc_eaten*perc_eaten)
-
-def calculate_population():
-    pop = 0
-    for bac in bac_population:
-        if bac.is_alive:
-            pop +=1
-    return pop
-
-
-def run_simulation(genomes, config):
+def run_simulation(net,gen_counter):
     run = True
     FPS = 60
     
     # Empty Collections For Nets and bac population
-    global nets, bac_population, grid_array,current_generation,max_population,current_population,gg_dict,time_spent_alive, current_generation
-    nets = []
+    global bac_population, grid_array,max_population,current_population,gg_dict,time_spent_alive
     bac_population =  []
     grid_array = np.array([])
-    current_generation = 0 # Generation counter
     max_population=0
     time_spent_alive=0
     gg_dict = {}
@@ -263,19 +192,13 @@ def run_simulation(genomes, config):
     #setup
     pygame.init()
     clock = pygame.time.Clock()
-    grid_array = create_grids(grid_array).reshape(10,10)
+    grid_array = create_grids(grid_array, WIDTH,HEIGHT).reshape(10,10)
     total_food_start = total_food_in_grids(grid_array)
 
-    for i, g in genomes:
-        # i = population index,
-        #print(genomes)
-        net = neat.nn.FeedForwardNetwork.create(g, config)
-        nets.append(net)
-        g.fitness = 0
-        bac_population.append(Bacteria(x=random.randint(50,950), y=random.randint(50,950)))
+    bac_population.append(Bacteria(x=random.randint(50,950), y=random.randint(50,950)))
     current_population = len(bac_population)
-    current_generation += 1
-    print(f"Population created. size={len(nets)},{len(bac_population)}")
+
+    #print(f"Population created. size={len(nets)},{len(bac_population)}")
     
     #draw on screen
     def redraw_window():
@@ -287,9 +210,9 @@ def run_simulation(genomes, config):
         for bac in bac_population:
             if bac.is_alive:
                 bac.draw()
-                statistics(bac)
+                statistics(bac,WIN, FONT)
         text_2 = FONT.render(f'Population:{current_population}', True, (0, 255, 0)) 
-        text_3 = FONT.render(f'Generation:{current_generation}', True, (0, 255, 0)) 
+        text_3 = FONT.render(f'Generation:{gen_counter}', True, (0, 255, 0)) 
         WIN.blit(text_2, (50, 100))
         WIN.blit(text_3, (50, 150))
         check_gg()
@@ -315,17 +238,16 @@ def run_simulation(genomes, config):
         #there should be 1 brain (1 memeber in net) and it should just keep making decisions
         for bac in bac_population:
             if bac.is_alive:
-                output = nets[0].activate(bac.get_data())
-                choice = output.index(max(output))
-                command_dict={0:"move_up",1:"move_down", 2:"move_right", 3:"move_left", 4:"eat", 5:"rest"}
-                bac.update(command=command_dict[choice])
-                if bac.hunger < 30:
-                    genomes[0][1].fitness +=1
+                X =bac.get_data()
+                print(X)
+                command= (net.spit_output(X))
+                bac.update(command)
+
             else:
                 pass
         total_food_end = total_food_in_grids(grid_array) 
 
-        current_population = calculate_population()
+        current_population = calculate_population(bac_population)
         if current_population>0:
             time_spent_alive+=1
             if current_population>max_population:
@@ -333,31 +255,35 @@ def run_simulation(genomes, config):
 
         if current_population<=0:
             total_food_end = total_food_in_grids(grid_array)        
-            print(f"max_pop= {max_population} ; fitness = {round(calculate_fitness_function(max_population,time_spent_alive, 1-total_food_end/total_food_start))} ; alive_for:  {time_spent_alive}, start_food = {total_food_start}, end_food ={total_food_end}")
+            #print(f"max_pop= {max_population} ; fitness = {round(calculate_fitness_function(max_population,time_spent_alive, 1-total_food_end/total_food_start))} ; alive_for:  {time_spent_alive}, start_food = {total_food_start}, end_food ={total_food_end}")
 
             time.sleep(1)
             run=False
-
         
-                
         redraw_window()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run=False
         
-if __name__ == "__main__":
-        # Load Config
-    config_path = "./config.txt"
-    config = neat.config.Config(neat.DefaultGenome,
-                                neat.DefaultReproduction,
-                                neat.DefaultSpeciesSet,
-                                neat.DefaultStagnation,
-                                config_path)
+def main_loop(number_of_generations=2):
+    global gen_counter,top_performers
+    gen_counter = 0
+    top_performers = []
 
-    # Create Population And Add Reporters
-    net_population = neat.Population(config)
-    net_population.add_reporter(neat.StdOutReporter(True))
-    stats = neat.StatisticsReporter()
-    net_population.add_reporter(stats)
-    print(net_population)
-    net_population.run(run_simulation, 50)
+    while number_of_generations >= gen_counter: 
+        current_generation = Generation(gen_counter,top_performers)
+        neural_net_list = current_generation.neural_net_list
+        for net in neural_net_list:
+            run_simulation(net,gen_counter)
+        
+        number_of_generations +=1
+        #compare fitness
+        #get top performers
+        #log smth?
+
+
+
+if __name__ == "__main__":
+
+    main_loop()
+
