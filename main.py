@@ -3,6 +3,7 @@ import sys
 import random
 import math
 import time
+import copy
 import numpy as np
 import pygame
 from square import Square
@@ -30,7 +31,7 @@ class Bacteria():
         self.colour = colour
         self.time = 0
         self.is_alive = True
-        self.center_tile_pos = self.get_tile_position([self.x,self.y])
+        self.center_tile_pos = get_tile_position([self.x,self.y])
 
         self.max_energy = max_energy
         self.current_energy = current_energy
@@ -52,7 +53,7 @@ class Bacteria():
     def eat(self):
         self.current_speed = 0
         if self.current_energy <= self.max_energy - 5:
-            center_tile = self.get_tile(self.center_tile_pos)
+            center_tile = get_tile(self.center_tile_pos,grid_array)
             self.current_energy += center_tile.eat_me(red = 5)
             if self.current_energy > 90:
                 self.mitosis(self.x,self.y)
@@ -60,7 +61,7 @@ class Bacteria():
     def radiate(self):
         radiation_amount = self.calculate_radiation(self.current_speed)
         self.current_energy -= radiation_amount
-        center_tile = self.get_tile(self.center_tile_pos)
+        center_tile = get_tile(self.center_tile_pos,grid_array)
         center_tile.blue += radiation_amount
         if self.current_energy <= 0:
             self.die()
@@ -79,17 +80,16 @@ class Bacteria():
             if self.x >= 40:
                 self.x -=self.max_speed
         self.current_speed = self.max_speed
-        self.center_tile_pos = self.get_tile_position([self.x,self.y])
+        self.center_tile_pos = get_tile_position([self.x,self.y])
         #self.update_current_tile()
 
     def see (self):
-        center_colour = self.get_colour_from_tile(self.get_tile_position([self.x,self.y]))
-        right_colour = self.get_colour_from_tile(self.get_tile_position([self.rl_sensor.right,self.rl_sensor.top]))
-        left_colour = self.get_colour_from_tile(self.get_tile_position([self.rl_sensor.left,self.rl_sensor.top]))
-        top_colour = self.get_colour_from_tile(self.get_tile_position([self.tb_sensor.right,self.tb_sensor.top]))
-        bottom_colour = self.get_colour_from_tile(self.get_tile_position([self.tb_sensor.right,self.tb_sensor.bottom]))
+        center_colour = get_colour_from_tile(get_tile_position([self.x,self.y]),grid_array)
+        right_colour = get_colour_from_tile(get_tile_position([self.rl_sensor.right,self.rl_sensor.top]),grid_array)
+        left_colour = get_colour_from_tile(get_tile_position([self.rl_sensor.left,self.rl_sensor.top]),grid_array)
+        top_colour = get_colour_from_tile(get_tile_position([self.tb_sensor.right,self.tb_sensor.top]),grid_array)
+        bottom_colour = get_colour_from_tile(get_tile_position([self.tb_sensor.right,self.tb_sensor.bottom]),grid_array)
         return [top_colour, left_colour, center_colour, bottom_colour, right_colour]
-        #print ( center_colour)
     
     def get_data(self):
         input_list=[] #would dict make more sense?
@@ -98,7 +98,6 @@ class Bacteria():
             input_list.append(colour[0]) #red
             input_list.append(colour[2]) #blue
         input_list.append(self.hunger)
-        #print(input_list)
         return input_list
 
     def update(self, command):
@@ -118,32 +117,6 @@ class Bacteria():
         #radiate energy
         self.radiate()
         self.hunger = self.max_energy - self.current_energy
-
-    def get_colour_from_tile(self,xy:list):
-        try:
-             return grid_array[xy[0],xy[1]].colour
-        except IndexError:
-            if xy == [10,10]:
-                return grid_array[xy[0]-1,xy[1]].colour
-            elif xy[0] > 9:
-                return grid_array[xy[0]-1,xy[1]-1].colour
-            else:
-                return grid_array[xy[0],xy[1]-1].colour
-    
-    def get_tile(self,xy:list):
-        try:
-             return grid_array[xy[0],xy[1]]
-        except IndexError:
-            if xy[0] > 9:
-                return grid_array[xy[0]-1,xy[1]]
-            else:
-                return grid_array[xy[0],xy[1]-1]
-
-    def get_tile_position (self,xy:list):
-        arr_x = math.floor(xy[0] /100) 
-        arr_y = math.floor(xy[1] /100)
-        return [arr_x,arr_y]
-
 
     def mitosis(self,x,y):
         new_x, new_y = self.get_new_spawnpoint(x,y)
@@ -169,37 +142,29 @@ class Bacteria():
         #bac_population.pop(index)
         
     def say_gg(self,x,y):
-        gg_dict[time_spent_alive + 15] =  [x,y]
+        gg_dict[time_passed + 15] =  [x,y]
 
 
     def calculate_radiation(self,current_speed):
-        radiation_amount = 0.1 + current_speed/10
+        radiation_amount = 0.5 + current_speed/10
         return radiation_amount
 
 
-def run_simulation(net,gen_counter):
+def run_simulation(net,gen_counter, grid_array):
     run = True
     FPS = 60
-    
-    # Empty Collections For Nets and bac population
-    global bac_population, grid_array,max_population,current_population,gg_dict,time_spent_alive
+    global bac_population,max_population,current_population,gg_dict,time_passed
     bac_population =  []
-    grid_array = np.array([])
     max_population=0
-    time_spent_alive=0
+    time_passed=0
     gg_dict = {}
 
     #setup
     pygame.init()
     clock = pygame.time.Clock()
-    grid_array = create_grids(grid_array, WIDTH,HEIGHT).reshape(10,10)
     total_food_start = total_food_in_grids(grid_array)
-
     bac_population.append(Bacteria(x=random.randint(50,950), y=random.randint(50,950)))
     current_population = len(bac_population)
-
-    #print(f"Population created. size={len(nets)},{len(bac_population)}")
-    
     #draw on screen
     def redraw_window():
         WIN.blit(BG,(0,0))
@@ -222,7 +187,7 @@ def run_simulation(net,gen_counter):
     def check_gg():
         delete_list = []
         for key,value in gg_dict.items():
-            if key == time_spent_alive:
+            if key == time_passed:
                 delete_list.append(key)
             else:
                 gg_text = FONT.render('gg', True, (0, 255, 0)) 
@@ -239,7 +204,6 @@ def run_simulation(net,gen_counter):
         for bac in bac_population:
             if bac.is_alive:
                 X =bac.get_data()
-                print(X)
                 command= (net.spit_output(X))
                 bac.update(command)
 
@@ -249,16 +213,23 @@ def run_simulation(net,gen_counter):
 
         current_population = calculate_population(bac_population)
         if current_population>0:
-            time_spent_alive+=1
+            time_passed+=1
             if current_population>max_population:
                 max_population = current_population
 
         if current_population<=0:
             total_food_end = total_food_in_grids(grid_array)        
-            #print(f"max_pop= {max_population} ; fitness = {round(calculate_fitness_function(max_population,time_spent_alive, 1-total_food_end/total_food_start))} ; alive_for:  {time_spent_alive}, start_food = {total_food_start}, end_food ={total_food_end}")
-
+            fitness = calculate_fitness_function(max_population, total_food_end, total_food_start)
             time.sleep(1)
             run=False
+            return fitness
+
+        if time_passed >= 1800:
+            total_food_end = total_food_in_grids(grid_array) 
+            fitness = calculate_fitness_function(max_population, total_food_end, total_food_start)
+            time.sleep(1)
+            run=False
+            return fitness
         
         redraw_window()
         for event in pygame.event.get():
@@ -267,16 +238,24 @@ def run_simulation(net,gen_counter):
         
 def main_loop(number_of_generations=2):
     global gen_counter,top_performers
-    gen_counter = 0
+    gen_counter = 1
     top_performers = []
-
     while number_of_generations >= gen_counter: 
         current_generation = Generation(gen_counter,top_performers)
-        neural_net_list = current_generation.neural_net_list
-        for net in neural_net_list:
-            run_simulation(net,gen_counter)
-        
-        number_of_generations +=1
+        neural_net_dict = current_generation.neural_net_dict
+        grid_array_ref = np.array([])
+        grid_array_ref = create_grids(grid_array_ref, WIDTH,HEIGHT).reshape(10,10)
+        fitness_dict={}
+        for key in neural_net_dict:
+            global grid_array
+            grid_array = copy.deepcopy(grid_array_ref)
+            net_fitness = run_simulation(neural_net_dict[key],gen_counter, grid_array)
+            neural_net_dict[key].set_fitness(net_fitness)
+            fitness_dict[key] = net_fitness
+            #del grid_array
+        top_performers = sorted(fitness_dict, key=fitness_dict.get, reverse=True)[:2]
+        print("increasing gen count")
+        gen_counter +=1
         #compare fitness
         #get top performers
         #log smth?
