@@ -252,9 +252,10 @@ def main_loop(number_of_generations=2):
             net_fitness = run_simulation(neural_net_dict[key],gen_counter, grid_array)
             neural_net_dict[key].set_fitness(net_fitness)
             fitness_dict[key] = net_fitness
-            #del grid_array
         top_performers = sorted(fitness_dict, key=fitness_dict.get, reverse=True)[:2]
-        print("increasing gen count")
+        print(fitness_dict)
+        print(top_performers)
+
         gen_counter +=1
         #compare fitness
         #get top performers
@@ -264,5 +265,5 @@ def main_loop(number_of_generations=2):
 
 if __name__ == "__main__":
 
-    main_loop()
+    main_loop(4)
 

@@ -24,8 +24,8 @@ class Species:
     def spit_output(self, input_params:list):
         command_dict = {0:"eat", 1:"move_up", 2:"move_down", 3: "move_right", 4:"move_left"}
         #run neural net and convert input to command
-        decisions = self.brain.predict(np.array(input_params).reshape(1,11))
-        command_int = decisions.argmax()
+        decisions = self.brain(np.array(input_params).reshape(1,11), training=False)
+        command_int = decisions.numpy().argmax()
         return command_dict[command_int]
 
     def set_fitness (self, fitness):
