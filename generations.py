@@ -59,7 +59,7 @@ class Generation:
     
     def create_random_gens(self):
         net_dict={}
-        for x in range (0,10):
+        for x in range (0,100):
             net = Species()
             net_dict[x]=net
         return net_dict
@@ -102,11 +102,9 @@ class Generation:
         while counter < 100:
             #create identical copies
             if counter <= 7:
-                print(top_performer_weights[counter].weights)
                 net = Species(weights=top_performer_weights[counter].weights)
                 net_dict[counter] = net
                 counter +=1
-                print(net.brain)
 
             #create mutated versions of top performers 
             elif counter < 95:
@@ -116,14 +114,12 @@ class Generation:
                         net = Species(weights=mutated_weights)
                         net_dict[counter] = net
                         counter +=1
-                print(net.brain)
 
             #create randos
             else:
                 net = Species(weights=[])
                 net_dict[counter]=net
                 counter +=1
-                print(net.brain)
             
         return  net_dict
 

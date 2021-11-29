@@ -15,7 +15,7 @@ def get_colour_from_tile(xy:list, grid_array):
          return grid_array[xy[0],xy[1]].colour
     except IndexError:
         if xy == [10,10]:
-            return grid_array[xy[0]-1,xy[1]].colour
+            return grid_array[xy[0]-1,xy[1]-1].colour
         elif xy[0] > 9:
             return grid_array[xy[0]-1,xy[1]-1].colour
         else:

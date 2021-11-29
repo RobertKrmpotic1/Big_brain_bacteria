@@ -6,6 +6,7 @@ import time
 import copy
 import numpy as np
 import pygame
+import pickle
 from square import Square
 from generations import Generation, Species
 from utils import *
@@ -235,17 +236,26 @@ def run_simulation(net,gen_counter, grid_array):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run=False
+
+def save_logs(gen_counter, dictionary, location):
+    with open(f'logs/{location}/gen_{gen_counter}.pickle', 'wb') as handle:
+        pickle.dump(dictionary, handle, protocol=pickle.HIGHEST_PROTOCOL)
         
 def main_loop(number_of_generations=2):
     global gen_counter,top_performers
     gen_counter = 1
     top_performers = []
     while number_of_generations >= gen_counter: 
+        #create generation
         current_generation = Generation(gen_counter,top_performers)
         neural_net_dict = current_generation.neural_net_dict
+
+        #create grid for the generation which will be used for each species
         grid_array_ref = np.array([])
         grid_array_ref = create_grids(grid_array_ref, WIDTH,HEIGHT).reshape(10,10)
+
         fitness_dict={}
+        #for brain of each species
         for key in neural_net_dict:
             global grid_array
             grid_array = copy.deepcopy(grid_array_ref)
@@ -253,19 +263,24 @@ def main_loop(number_of_generations=2):
             neural_net_dict[key].set_fitness(net_fitness)
             fitness_dict[key] = net_fitness
         top_performers_int = sorted(fitness_dict, key=fitness_dict.get, reverse=True)[:8]
+        top_performers = []
+
+        save_logs(gen_counter, fitness_dict, "stats")
+        
+        print(f"Generation: {gen_counter}  Avg fitness: {np.array(list(fitness_dict.values())).mean()}, Max fitness: {np.array(list(fitness_dict.values())).max()}")
+
         for val in top_performers_int:
             top_performers.append(neural_net_dict[val].brain)
-        print(fitness_dict)
-        print(top_performers_int)
+
+        if gen_counter % 5 == 0:
+            weights_list = []
+            for brain in top_performers:
+                weights_list.append(brain.weights)
+            save_logs(gen_counter, weights_list, "model_weights")
 
         gen_counter +=1
-        #compare fitness
-        #get top performers
-        #log smth?
-
-
 
 if __name__ == "__main__":
 
-    main_loop(5)
+    main_loop(300)
 
