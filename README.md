@@ -23,7 +23,11 @@ The bacteria is a representation of a simple organism. It has only few attribute
 The actions of the bacteria are decided by sequential neural network. It has several inputs which are colours of the tile around it as well as the tile it is currently standing on. It also receives its current hunger as input. The output of the neural network is mapped to 5 possible actions: move in a direction or eat. The brains among species differ in weights and biases of neurons in the neural network.
 
 ### Rounds
-In each round only a single species particiapte on a grid. It has a time limit and needs to eat as much food off the tiles as possible and produce as many copies.
+In each round only a single species particiapte on a grid. It has a time limit and needs to eat as much food off the tiles as possible and produce as many copies of itself. 
 
 ### Generations
 Each generation has 100 species and each gets to be tested in a round. All species of a generation are tested on the same grid. The grid changes each generation and is randomly generated. The first generation is randomly generated. The other generations are generated using custom evolutionary algorithm called Fibbo-Fleming which allows top 8 species to mutate and create offspring, rewarding the best performing species with the most offspring. 
+
+### Fibo-Fleming algorithm
+
+
