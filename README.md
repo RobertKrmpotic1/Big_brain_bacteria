@@ -31,6 +31,6 @@ Each generation has 100 species and each gets to be tested in a round. All speci
 ### Fibo-Fleming algorithm
 
 This algorithm is made to reward the highest performering neural network with most offspring with varying degrees of mutations. 
-In this example 100 species need to be produced from top 8 performers. Each of them gets one exact replica in the next generation. Moreover, the 8th performer (last in the top list) gets 1 additional copy with 1 modified weight or bias. The 7th gets 2 additional copies with first one having 1 modification and second one having 2... and so on following Fibonacci sequence. Finally, the top performer will have 34 mutant copies with most mutated one having 34 modifications to the weights and bias of the neural network. 
+In this example 100 species need to be produced from top 8 performers. Each of them gets one exact replica in the next generation. Moreover, the 8th performer (last in the top list) gets 1 additional copy with 1 modified weight or bias. The 7th gets 2 additional copies with first one having 1 modification and second one having 2... and so on following Fibonacci sequence. Finally, the top performer will have 34 mutant copies with most mutated one having 34 modifications to the weights and bias of the neural network. Modifications are done by replacing the current weight/bias with a sinus of a random number.
 
 Therefore, the new generation will consist of: 8 exact replicas of top performers,  87 mutants, and 5 nets where the weights and biases are completely randomised. 
