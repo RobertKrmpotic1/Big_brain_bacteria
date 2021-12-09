@@ -1,5 +1,6 @@
 import os
 import sys
+from pathlib import Path
 import random
 import math
 import time
@@ -12,9 +13,6 @@ from generations import Generation, Species
 from utils import *
 
 pygame.font.init()
-
-#https://github.com/codewmax/NEAT-ChromeDinosaur/blob/master/main.py
-#https://github.com/NeuralNine/ai-car-simulation/blob/master/newcar.py
 
 #Config
 WIDTH, HEIGHT = 1000, 1000
@@ -238,6 +236,7 @@ def run_simulation(net,gen_counter, grid_array):
                 run=False
 
 def save_logs(gen_counter, dictionary, location):
+    Path(f"logs/{location}").mkdir(exist_ok=True)
     with open(f'logs/{location}/gen_{gen_counter}.pickle', 'wb') as handle:
         pickle.dump(dictionary, handle, protocol=pickle.HIGHEST_PROTOCOL)
         
